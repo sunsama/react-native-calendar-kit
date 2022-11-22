@@ -60,6 +60,7 @@ const TimelineSlots = ({
   selectedEvent,
   onEndDragSelectedEvent,
   editEventGestureEnabled = true,
+  renderEventContent,
   ...other
 }: TimelineSlotsProps) => {
   const {
@@ -138,6 +139,7 @@ const TimelineSlots = ({
         holidays={extraData?.holidays}
         events={extraData?.events}
         selectedEventId={extraData?.selectedEventId}
+        renderEventContent={renderEventContent}
         {...other}
       />
     );
@@ -254,6 +256,7 @@ const TimelineSlots = ({
             selectedEvent={selectedEvent}
             onEndDragSelectedEvent={onEndDragSelectedEvent}
             isEnabled={editEventGestureEnabled}
+            renderEventContent={renderEventContent}
           />
         )}
       </ScrollView>

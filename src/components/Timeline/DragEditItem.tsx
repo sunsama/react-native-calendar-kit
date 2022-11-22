@@ -8,6 +8,7 @@ import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withTiming,
+  SharedValue,
 } from 'react-native-reanimated';
 import { COLUMNS, DEFAULT_PROPS } from '../../constants';
 import { useTimelineCalendarContext } from '../../context/TimelineProvider';
@@ -18,7 +19,10 @@ import { triggerHaptic } from '../../utils';
 interface DragEditItemProps {
   selectedEvent: PackedEvent;
   onEndDragSelectedEvent?: (event: PackedEvent) => void;
-  renderEventContent?: (event: PackedEvent) => JSX.Element;
+  renderEventContent?: (
+    event: PackedEvent,
+    timeIntervalHeight: SharedValue<number>
+  ) => JSX.Element;
   isEnabled?: boolean;
 }
 
@@ -67,7 +71,9 @@ const DragEditItem = ({
   const eventHeight = useSharedValue<number>(event.height);
 
   useEffect(() => {
-    triggerHaptic(useHaptic);
+    if (useHaptic) {
+      triggerHaptic();
+    }
   }, [useHaptic]);
 
   useEffect(() => {
@@ -202,7 +208,9 @@ const DragEditItem = ({
         });
         eventTop.value = newTopPosition;
         currentHour.value = roundedHour;
-        runOnJS(triggerHaptic)(useHaptic);
+        if (useHaptic) {
+          runOnJS(triggerHaptic)();
+        }
       }
       runOnJS(_handleScroll)({
         x: absoluteX,
@@ -232,7 +240,9 @@ const DragEditItem = ({
       const isSameHeight = eventHeight.value === clampedHeight;
       if (!isSameHeight) {
         eventHeight.value = clampedHeight;
-        runOnJS(triggerHaptic)(useHaptic);
+        if (useHaptic) {
+          runOnJS(triggerHaptic)();
+        }
       }
     })
     .onEnd(() => {
@@ -268,12 +278,26 @@ const DragEditItem = ({
           ]}
         >
           {renderEventContent
-            ? renderEventContent(event)
+            ? renderEventContent(event, timeIntervalHeight)
             : _renderEventContent()}
           <GestureDetector gesture={dragDurationGesture}>
             <View style={[styles.indicator, { width: columnWidth }]}>
-              <View style={styles.indicatorLine} />
-              <View style={styles.indicatorLine} />
+              <View
+                style={[
+                  styles.indicatorLine,
+                  theme.editIndicatorColor
+                    ? { backgroundColor: theme.editIndicatorColor }
+                    : undefined,
+                ]}
+              />
+              <View
+                style={[
+                  styles.indicatorLine,
+                  theme.editIndicatorColor
+                    ? { backgroundColor: theme.editIndicatorColor }
+                    : undefined,
+                ]}
+              />
             </View>
           </GestureDetector>
         </Animated.View>
