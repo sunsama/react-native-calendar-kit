@@ -40,6 +40,7 @@ type CustomTimelineProviderProps = Required<
     | 'hourFormat'
     | 'timeZone'
     | 'calendarWidth'
+    | 'onTimeIntervalHeightChange'
   >
 >;
 
