@@ -1,0 +1,41 @@
+export declare const SCREEN_WIDTH: number;
+export declare const SCREEN_HEIGHT: number;
+export declare const DEFAULT_PROPS: {
+    VIEW_MODE: "week";
+    FIRST_DAY: number;
+    MIN_DATE: string;
+    MAX_DATE: string;
+    INITIAL_DATE: string;
+    START: number;
+    END: number;
+    TIME_INTERVAL: number;
+    INIT_TIME_INTERVAL_HEIGHT: number;
+    MIN_TIME_INTERVAL_HEIGHT: number;
+    MAX_TIME_INTERVAL_HEIGHT: number;
+    CELL_BORDER_COLOR: string;
+    PRIMARY_COLOR: string;
+    CREATE_ITEM_BACKGROUND_COLOR: string;
+    SECONDARY_COLOR: string;
+    WHITE_COLOR: string;
+    HOUR_WIDTH: number;
+    DAY_BAR_HEIGHT: number;
+    SPACE_CONTENT: number;
+    DRAG_CREATE_INTERVAL: number;
+    DRAG_STEP: number;
+    UNAVAILABLE_BACKGROUND_COLOR: string;
+    RIGHT_EDGE_SPACING: number;
+    OVERLAP_EVENTS_SPACING: number;
+    BLACK_COLOR: string;
+    EVENT_ANIMATED_DURATION: number;
+    NOW_INDICATOR_INTERVAL: number;
+    NAVIGATION_DELAY: number;
+    EDIT_SAVE_MODE: "manual";
+};
+export declare const COLUMNS: {
+    week: number;
+    threeDays: number;
+    workWeek: number;
+    day: number;
+};
+export declare const SECONDS_IN_DAY = 86400;
+//# sourceMappingURL=constants.d.ts.map
