@@ -6,77 +6,81 @@ import type { EventItem, PackedEvent, ThemeProperties } from './types';
 
 type DateData = { data: string[]; index: number };
 
-export const calculateDates = (
-  initialFirstDay: number,
-  minDateStr: string,
-  maxDateStr: string,
-  initialDate: string
-) => {
-  let day: DateData = { data: [], index: -1 },
-    week: DateData = { data: [], index: -1 },
-    threeDays: DateData = { data: [], index: -1 },
-    workWeek: DateData = { data: [], index: -1 };
-
-  const minDate = moment(minDateStr);
-  const maxDate = moment(maxDateStr);
-  const minDateUnix = minDate.unix();
-  const maxDateUnix = maxDate.unix();
-  const minWeekDay = minDate.day();
-  const maxWeekDay = maxDate.day();
-
-  const fDow = (7 + initialFirstDay) % 7;
-  const diffBefore = (minWeekDay + 7 - fDow) % 7;
-
-  const minWeekDate = minDate.subtract(diffBefore, 'd');
-  const minWeekDateUnix = minWeekDate.unix();
-  let minWorkWorkDateUnix = minWeekDateUnix;
-  if (diffBefore === 5) {
-    minWorkWorkDateUnix = minDateUnix + 2 * SECONDS_IN_DAY;
-  } else if (diffBefore === 6) {
-    minWorkWorkDateUnix = minDateUnix + SECONDS_IN_DAY;
-  }
-
-  const lDow = (fDow + 6) % 7;
-  const diffAfter = (lDow + 7 - maxWeekDay) % 7;
-  const maxWeekDateUnix = maxDateUnix + diffAfter * SECONDS_IN_DAY;
-
-  const totalDays = (maxWeekDateUnix - minWeekDateUnix) / SECONDS_IN_DAY;
-  let startWorkWeekDate = minWorkWorkDateUnix,
-    startWeekDate = minWeekDateUnix,
-    startThreeDays = minDateUnix,
-    startDay = minDateUnix;
-  for (let dayIndex = 0; dayIndex < totalDays; dayIndex++) {
-    const currentUnix = minWeekDateUnix + dayIndex * SECONDS_IN_DAY;
-    const dateStr = minWeekDate.clone().add(dayIndex, 'd').format('YYYY-MM-DD');
-    if (startDay === currentUnix) {
-      if (currentUnix <= maxDateUnix) {
-        day.data.push(dateStr);
-      }
-      startDay = currentUnix + SECONDS_IN_DAY;
-    }
-    if (startWorkWeekDate === currentUnix) {
-      workWeek.data.push(dateStr);
-      startWorkWeekDate = currentUnix + 7 * SECONDS_IN_DAY;
-    }
-    if (startWeekDate === currentUnix) {
-      week.data.push(dateStr);
-      startWeekDate = currentUnix + 7 * SECONDS_IN_DAY;
-    }
-    if (startThreeDays === currentUnix && startThreeDays <= maxDateUnix) {
-      threeDays.data.push(dateStr);
-      startThreeDays = currentUnix + 3 * SECONDS_IN_DAY;
-    }
-    if (dateStr === initialDate) {
-      day.index = day.data.length - 1;
-      threeDays.index = threeDays.data.length - 1;
-      week.index = week.data.length - 1;
-      workWeek.index = workWeek.data.length - 1;
-    }
-  }
-
-  return { day, week, threeDays, workWeek };
+type DateGroup = {
+  day: DateData;
+  week: DateData;
+  threeDays: DateData;
+  workWeek: DateData;
 };
 
+export const calculateDates = (
+  initialFirstDay: 0 | 1,
+  minDateStr: string,
+  maxDateStr: string,
+  initialDate: string,
+  timeZone: string
+): DateGroup => {
+  const minDate = moment.tz(minDateStr, timeZone);
+  const maxDate = moment.tz(maxDateStr, timeZone);
+
+  const getStartOfWeekDate = (date: moment.Moment): moment.Moment => {
+    return date.clone().startOf(initialFirstDay === 0 ? 'week' : 'isoWeek');
+  };
+
+  const minWeekDate = getStartOfWeekDate(minDate);
+  const maxWeekDate = getStartOfWeekDate(maxDate).add(6, 'd'); // End of week
+  const totalDays = maxWeekDate.diff(minWeekDate, 'days');
+
+  const createEmptyDateData = (): DateData => ({ data: [], index: -1 });
+
+  const dateGroup: DateGroup = {
+    day: createEmptyDateData(),
+    week: createEmptyDateData(),
+    threeDays: createEmptyDateData(),
+    workWeek: createEmptyDateData(),
+  };
+
+  const initialDates = {
+    day: minDate.clone(),
+    week: minWeekDate.clone(),
+    threeDays: minDate.clone(),
+    workWeek: minWeekDate.clone(),
+  };
+
+  const increments = {
+    day: 1,
+    week: 7,
+    threeDays: 3,
+    workWeek: 7,
+  };
+
+  for (let dayIndex = 0; dayIndex <= totalDays; dayIndex++) {
+    const currentDate = minWeekDate.clone().add(dayIndex, 'd');
+
+    if (currentDate.isAfter(maxDate)) {
+      break;
+    }
+
+    const dateStr = currentDate.format('YYYY-MM-DD');
+
+    Object.keys(dateGroup).forEach((key) => {
+      if (initialDates[key as keyof DateGroup].isSameOrBefore(currentDate)) {
+        dateGroup[key as keyof DateGroup].data.push(dateStr);
+        initialDates[key as keyof DateGroup].add(
+          increments[key as keyof DateGroup],
+          'd'
+        );
+
+        if (dateStr === initialDate) {
+          dateGroup[key as keyof DateGroup].index =
+            dateGroup[key as keyof DateGroup].data.length - 1;
+        }
+      }
+    });
+  }
+
+  return dateGroup;
+};
 export const calculateHours = (
   start: number,
   end: number,
@@ -180,7 +184,7 @@ const buildEvent = (
       .add(options.dayIndex, 'd');
     const diffCurrent = eventStart.diff(currentDate, 'm') / 60;
     if (diffCurrent < 0) {
-      start = 0 + diffCurrent - options.startHour;
+      start = diffCurrent - options.startHour;
     }
   }
 

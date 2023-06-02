@@ -11,6 +11,7 @@ import React, {
 import { PixelRatio, ScrollView, useWindowDimensions } from 'react-native';
 import type { GestureType } from 'react-native-gesture-handler';
 import {
+  runOnJS,
   SharedValue,
   useDerivedValue,
   useSharedValue,
@@ -39,6 +40,7 @@ type CustomTimelineProviderProps = Required<
     | 'hourFormat'
     | 'timeZone'
     | 'calendarWidth'
+    | 'onTimeIntervalHeightChange'
   >
 >;
 
@@ -90,7 +92,7 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
     minDate = DEFAULT_PROPS.MIN_DATE,
     maxDate = DEFAULT_PROPS.MAX_DATE,
     viewMode = DEFAULT_PROPS.VIEW_MODE,
-    firstDay = DEFAULT_PROPS.FIRST_DAY,
+    firstDay = DEFAULT_PROPS.FIRST_DAY as 0 | 1,
     initialDate: initDate = DEFAULT_PROPS.INITIAL_DATE,
     start = DEFAULT_PROPS.START,
     end = DEFAULT_PROPS.END,
@@ -99,6 +101,7 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
     initialTimeIntervalHeight = DEFAULT_PROPS.INIT_TIME_INTERVAL_HEIGHT,
     minTimeIntervalHeight: initialMinTimeIntervalHeight,
     maxTimeIntervalHeight = DEFAULT_PROPS.MAX_TIME_INTERVAL_HEIGHT,
+    onTimeIntervalHeightChange,
     syncedLists = true,
     theme: initTheme,
     spaceFromTop = DEFAULT_PROPS.SPACE_CONTENT,
@@ -139,8 +142,9 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
 
   /** Prepare data*/
   const pages = useMemo(
-    () => calculateDates(firstDay, minDate, maxDate, initialDate.current),
-    [firstDay, minDate, maxDate]
+    () =>
+      calculateDates(firstDay, minDate, maxDate, initialDate.current, timeZone),
+    [firstDay, minDate, maxDate, timeZone]
   );
   const firstDate = useRef({
     week: pages.week.data[0],
@@ -167,6 +171,18 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
     initialMinTimeIntervalHeight || 0
   );
   const isDragCreateActive = useSharedValue(false);
+
+  const hasOnTimeIntervalHeightChange = !!onTimeIntervalHeightChange;
+
+  useDerivedValue(() => {
+    if (hasOnTimeIntervalHeightChange) {
+      runOnJS(onTimeIntervalHeightChange)(timeIntervalHeight.value);
+    }
+  }, [
+    hasOnTimeIntervalHeightChange,
+    onTimeIntervalHeightChange,
+    timeIntervalHeight,
+  ]);
 
   const offsetY = useSharedValue(0);
 

@@ -131,7 +131,7 @@ export interface TimelineProviderProps {
    *
    ** Default: `1` (Monday)
    */
-  firstDay?: number;
+  firstDay?: 0 | 1;
 
   /** Minimum display date.
    *
@@ -191,6 +191,9 @@ export interface TimelineProviderProps {
    ** Default: `116`
    */
   maxTimeIntervalHeight?: number;
+
+  /** Callback function will be called when time interval height changed */
+  onTimeIntervalHeightChange?: (height: number) => void;
 
   /** Auto scroll header when scroll time slots view.
    *

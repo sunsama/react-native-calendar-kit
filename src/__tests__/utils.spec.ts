@@ -1,17 +1,17 @@
-import { calculateDates, calculateHours, groupEventsByDate } from '../utils';
 import { expectHourData, sampleData } from '../__mocks__/data';
+import { calculateDates, calculateHours, groupEventsByDate } from '../utils';
 
 describe('get date data', () => {
   it('2022-10-01 -> 2022-10-31', () => {
     const fromDate = '2022-10-01';
     const toDate = '2022-10-31';
     const initialDate = '2022-10-10';
-    const dates = calculateDates(1, fromDate, toDate, initialDate);
+    const dates = calculateDates(1, fromDate, toDate, initialDate, 'UTC');
 
     const expectData = {
       day: { length: 31, index: 9 },
       threeDays: { length: 11, index: 3 },
-      workWeek: { length: 5, index: 1 },
+      workWeek: { length: 6, index: 2 },
       week: { length: 6, index: 2 },
     };
 
