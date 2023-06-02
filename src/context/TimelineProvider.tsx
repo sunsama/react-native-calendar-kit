@@ -92,7 +92,7 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
     minDate = DEFAULT_PROPS.MIN_DATE,
     maxDate = DEFAULT_PROPS.MAX_DATE,
     viewMode = DEFAULT_PROPS.VIEW_MODE,
-    firstDay = DEFAULT_PROPS.FIRST_DAY,
+    firstDay = DEFAULT_PROPS.FIRST_DAY as 0 | 1,
     initialDate: initDate = DEFAULT_PROPS.INITIAL_DATE,
     start = DEFAULT_PROPS.START,
     end = DEFAULT_PROPS.END,
@@ -142,8 +142,9 @@ const TimelineProvider: React.FC<TimelineProviderProps> = (props) => {
 
   /** Prepare data*/
   const pages = useMemo(
-    () => calculateDates(firstDay, minDate, maxDate, initialDate.current),
-    [firstDay, minDate, maxDate]
+    () =>
+      calculateDates(firstDay, minDate, maxDate, initialDate.current, timeZone),
+    [firstDay, minDate, maxDate, timeZone]
   );
   const firstDate = useRef({
     week: pages.week.data[0],

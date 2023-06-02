@@ -131,7 +131,7 @@ export interface TimelineProviderProps {
    *
    ** Default: `1` (Monday)
    */
-  firstDay?: number;
+  firstDay?: 0 | 1;
 
   /** Minimum display date.
    *
