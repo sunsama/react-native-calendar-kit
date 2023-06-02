@@ -1,6 +1,6 @@
 {
   "name": "@sunsama/calendar-kit",
-  "version": "1.13.3",
+  "version": "1.14.0",
   "description": "React Native Calendar Kit",
   "main": "lib/commonjs/index",
   "module": "lib/module/index",
