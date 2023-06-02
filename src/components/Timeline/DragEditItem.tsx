@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import moment from 'moment-timezone';
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
@@ -15,14 +15,14 @@ import { COLUMNS, DEFAULT_PROPS } from '../../constants';
 import { useTimelineCalendarContext } from '../../context/TimelineProvider';
 import useTimelineScroll from '../../hooks/useTimelineScroll';
 import type { PackedEvent, ThemeProperties } from '../../types';
-import { triggerHaptic } from '../../utils';
+import { roundTo, triggerHaptic } from '../../utils';
 
 interface DragEditItemProps {
   selectedEvent: PackedEvent;
   onEndDragSelectedEvent?: (event: PackedEvent) => void;
   renderEventContent?: (
     event: PackedEvent,
-    timeIntervalHeight: SharedValue<number>
+    heightByTimeInterval: SharedValue<number>
   ) => JSX.Element;
   isEnabled?: boolean;
   EditIndicatorComponent?: JSX.Element;
@@ -49,6 +49,7 @@ const DragEditItem = ({
     rightEdgeSpacing,
     spaceFromTop,
     timeIntervalHeight,
+    heightByTimeInterval,
     viewMode,
     spaceFromBottom,
     timelineLayoutRef,
@@ -69,7 +70,7 @@ const DragEditItem = ({
   const eventWidth = useSharedValue(event.width);
   const eventLeft = useSharedValue(leftWithHourColumn + event.left);
   const currentHour = useSharedValue(
-    event.top / timeIntervalHeight.value + start
+    event.top / heightByTimeInterval.value + start
   );
 
   const startOffsetY = useSharedValue(0);
@@ -164,10 +165,10 @@ const DragEditItem = ({
     const newLeftPosition = event.leftByIndex! + translateX.value;
     const dayIndex = Math.round(newLeftPosition / columnWidth);
     const startDate = pages[viewMode].data[currentIndex.value];
-    const currentDateMoment = dayjs(startDate)
+    const currentDateMoment = moment
+      .tz(startDate, tzOffset)
       .add(dayIndex, 'd')
-      .add(currentHour.value, 'h')
-      .subtract(tzOffset, 'm');
+      .add(currentHour.value, 'h');
 
     const newEvent = {
       ...selectedEvent,
@@ -177,7 +178,7 @@ const DragEditItem = ({
       start: currentDateMoment.toISOString(),
       end: currentDateMoment
         .clone()
-        .add(eventHeight.value / timeIntervalHeight.value, 'h')
+        .add(eventHeight.value / heightByTimeInterval.value, 'h')
         .toISOString(),
     };
 
@@ -217,14 +218,10 @@ const DragEditItem = ({
       const nextTranslateY = startXY.value.y + translationY;
       const offset = offsetY.value - spaceFromTop;
       const originalY = startXY.value.y + offset + translationY;
-      const originalTime = originalY / timeIntervalHeight.value;
-      const rHours = Math.floor(originalTime);
-      const minutes = (originalTime - rHours) * 60;
-      const rMinutes = Math.round(minutes);
-      const extraPos = dragStep - (rMinutes % dragStep);
-      const roundedHour = (rMinutes + extraPos + rHours * 60) / 60;
+      const originalTime = originalY / heightByTimeInterval.value;
+      const roundedHour = roundTo(originalTime, dragStep, 'up');
       const newTopPosition =
-        roundedHour * timeIntervalHeight.value + spaceFromTop;
+        roundedHour * heightByTimeInterval.value + spaceFromTop;
       const isSameX = translateX.value === roundedTranslateX;
       const isSameY = eventTop.value === newTopPosition;
       if (!isSameX || !isSameY) {
@@ -262,7 +259,7 @@ const DragEditItem = ({
       startHeight.value = eventHeight.value;
     })
     .onUpdate((e) => {
-      const heightOfTenMinutes = (dragStep / 60) * timeIntervalHeight.value;
+      const heightOfTenMinutes = (dragStep / 60) * heightByTimeInterval.value;
       const nextHeight = startHeight.value + e.translationY;
       const roundedHeight =
         Math.ceil(nextHeight / heightOfTenMinutes) * heightOfTenMinutes;
@@ -311,7 +308,7 @@ const DragEditItem = ({
           ]}
         >
           {renderEventContent
-            ? renderEventContent(event, timeIntervalHeight)
+            ? renderEventContent(event, heightByTimeInterval)
             : _renderEventContent()}
           <GestureDetector gesture={dragDurationGesture}>
             <View style={styles.indicatorContainer}>
@@ -380,7 +377,7 @@ const AnimatedHour = ({
   ) => {
     let newTime = `${hourStr}:${minutesStr}`;
     if (hourFormat) {
-      newTime = dayjs(
+      newTime = moment(
         `1970/1/1 ${hourStr}:${minutesStr}`,
         'YYYY/M/D HH:mm'
       ).format(hourFormat);

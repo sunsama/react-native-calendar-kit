@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import moment from 'moment-timezone';
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
@@ -25,7 +25,7 @@ const DragCreateItem = ({
   const {
     columnWidth,
     hourWidth,
-    timeIntervalHeight,
+    heightByTimeInterval,
     dragCreateInterval,
     theme,
     hourFormat,
@@ -33,7 +33,7 @@ const DragCreateItem = ({
 
   const animatedStyles = useAnimatedStyle(() => {
     return {
-      height: (dragCreateInterval / 60) * timeIntervalHeight.value,
+      height: (dragCreateInterval / 60) * heightByTimeInterval.value,
       transform: [{ translateX: offsetX.value }, { translateY: offsetY.value }],
     };
   });
@@ -87,7 +87,7 @@ const AnimatedHour = ({
   ) => {
     let newTime = `${hourStr}:${minutesStr}`;
     if (hourFormat) {
-      newTime = dayjs(
+      newTime = moment(
         `1970/1/1 ${hourStr}:${minutesStr}`,
         'YYYY/M/D HH:mm'
       ).format(hourFormat);

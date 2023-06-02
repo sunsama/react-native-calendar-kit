@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import moment from 'moment-timezone';
 import { useRef, useState } from 'react';
 import type { GestureResponderEvent } from 'react-native';
 import {
@@ -14,7 +14,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { useTimelineCalendarContext } from '../context/TimelineProvider';
-import { triggerHaptic } from '../utils';
+import { roundTo, triggerHaptic } from '../utils';
 import useTimelineScroll from './useTimelineScroll';
 
 interface useDragCreateGesture {
@@ -45,6 +45,7 @@ const useDragCreateGesture = ({ onDragCreateEnd }: useDragCreateGesture) => {
     tzOffset,
     start,
     navigateDelay,
+    heightByTimeInterval,
   } = useTimelineCalendarContext();
   const { goToNextPage, goToPrevPage, goToOffsetY } = useTimelineScroll();
 
@@ -65,14 +66,10 @@ const useDragCreateGesture = ({ onDragCreateEnd }: useDragCreateGesture) => {
     const calcX = positionIndex * columnWidth;
 
     const startY = yPosition + offsetY.value - spaceFromTop;
-    const subtractHour = (dragCreateInterval / 60) * timeIntervalHeight.value;
-    const originalTime = (startY - subtractHour) / timeIntervalHeight.value;
-    const rHours = Math.floor(originalTime);
-    const minutes = (originalTime - rHours) * 60;
-    const rMinutes = Math.round(minutes);
-    const extraPos = nearestMinutes - (rMinutes % nearestMinutes);
-    const roundedHour = (rMinutes + extraPos + rHours * 60) / 60;
-    const calcY = roundedHour * timeIntervalHeight.value;
+    const subtractHour = (dragCreateInterval / 60) * heightByTimeInterval.value;
+    const originalTime = (startY - subtractHour) / heightByTimeInterval.value;
+    const roundedHour = roundTo(originalTime, nearestMinutes, 'up');
+    const calcY = roundedHour * heightByTimeInterval.value;
     currentHour.value = roundedHour + start;
 
     return {
@@ -139,16 +136,16 @@ const useDragCreateGesture = ({ onDragCreateEnd }: useDragCreateGesture) => {
       clearInterval(timeoutRef.current);
       timeoutRef.current = null;
     }
-    const time = event.y / timeIntervalHeight.value;
+    const time = event.y / heightByTimeInterval.value;
     const positionIndex = Math.round(event.x / columnWidth);
     const startDate = pages[viewMode].data[currentIndex.value];
-    const eventStart = dayjs(startDate)
+    const eventStart = moment
+      .tz(startDate, tzOffset)
       .add(positionIndex, 'd')
       .add(time, 'h')
-      .add(start, 'h')
-      .subtract(tzOffset, 'm');
-    const isBeforeMinDate = eventStart.isBefore(dayjs(minDate), 'd');
-    const isAfterMaxDate = eventStart.isAfter(dayjs(maxDate), 'd');
+      .add(start, 'h');
+    const isBeforeMinDate = eventStart.isBefore(moment(minDate), 'd');
+    const isAfterMaxDate = eventStart.isAfter(moment(maxDate), 'd');
 
     if (isBeforeMinDate || isAfterMaxDate) {
       return;

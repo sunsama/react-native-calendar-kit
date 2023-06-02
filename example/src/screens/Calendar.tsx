@@ -1,6 +1,7 @@
 import {
   EventItem,
   HighlightDates,
+  MomentConfig,
   OnChangeProps,
   PackedEvent,
   RangeTime,
@@ -12,19 +13,12 @@ import type { NavigationProp, RouteProp } from '@react-navigation/native';
 import dayjs from 'dayjs';
 import React, {
   useCallback,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from 'react';
-import {
-  AppState,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Line, Svg } from 'react-native-svg';
 import CustomUnavailableItem from './CustomUnavailableItem';
@@ -90,30 +84,19 @@ const unavailableHours = {
   ],
 };
 
+MomentConfig.updateLocale('vi', {
+  weekdaysShort: 'CN_T2_T3_T4_T5_T6_T7'.split('_'),
+});
+
+MomentConfig.updateLocale('ja', {
+  weekdaysShort: '日_月_火_水_木_金_土'.split('_'),
+});
+
 const Calendar = ({ route, navigation }: CalendarProps) => {
   const { bottom: safeBottom } = useSafeAreaInsets();
   const calendarRef = useRef<TimelineCalendarHandle>(null);
   const [events, setEvents] = useState<EventItem[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<PackedEvent>();
-
-  const appState = useRef(AppState.currentState);
-  // if autoRefreshTimezoneOffset = true, you can remove this useEffect
-  useEffect(() => {
-    const subscription = AppState.addEventListener('change', (nextAppState) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
-        // Recheck timezone offset the app has come to the foreground
-        calendarRef.current?.recheckTimezoneOffset();
-      }
-      appState.current = nextAppState;
-    });
-
-    return () => {
-      subscription.remove();
-    };
-  }, []);
 
   const _renderHeaderRight = useCallback(() => {
     return (

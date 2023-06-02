@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import moment from 'moment-timezone';
 import React, { memo, useCallback, useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -13,15 +13,14 @@ interface NowIndicatorProps {
   width: number;
   timeIntervalHeight: SharedValue<number>;
   nowIndicatorColor?: string;
-  tzOffset: number;
+  tzOffset: string;
   start: number;
   updateCurrentDate: () => void;
-  recheckTimezoneOffset?: () => void;
   nowIndicatorInterval: number;
 }
 
-const getCurrentMinutes = (tzOffset: number) => {
-  const now = dayjs().add(tzOffset, 'm');
+const getCurrentMinutes = (tzOffset: string) => {
+  const now = moment.tz(tzOffset);
   const date = now.format('YYYY-MM-DD');
   const minutes = now.hour() * 60 + now.minute();
   return { date, minutes };
@@ -36,7 +35,6 @@ const NowIndicator = ({
   start,
   updateCurrentDate,
   nowIndicatorInterval,
-  recheckTimezoneOffset,
 }: NowIndicatorProps) => {
   const initial = useRef(getCurrentMinutes(tzOffset));
   const translateY = useSharedValue(0);
@@ -44,7 +42,6 @@ const NowIndicator = ({
 
   const prevMinutes = useRef(initial.current.minutes);
   const updateLinePosition = useCallback(() => {
-    recheckTimezoneOffset?.();
     const { date, minutes } = getCurrentMinutes(tzOffset);
     if (prevMinutes.current === minutes) {
       return;
@@ -54,21 +51,12 @@ const NowIndicator = ({
       return;
     }
     prevMinutes.current = minutes;
-    const extraMinutes = start * 60;
-    const subtractInitialMinutes =
-      minutes - (initial.current.minutes + extraMinutes);
+    const subtractInitialMinutes = minutes - initial.current.minutes;
     const newY = (subtractInitialMinutes / 60) * timeIntervalHeight.value;
     translateY.value = withTiming(newY, {
       duration: 500,
     });
-  }, [
-    recheckTimezoneOffset,
-    tzOffset,
-    start,
-    timeIntervalHeight.value,
-    translateY,
-    updateCurrentDate,
-  ]);
+  }, [tzOffset, timeIntervalHeight.value, translateY, updateCurrentDate]);
 
   useEffect(() => {
     updateLinePosition();
@@ -88,7 +76,7 @@ const NowIndicator = ({
 
   const animStyle = useAnimatedStyle(() => {
     return {
-      top: (initial.current.minutes / 60) * timeIntervalHeight.value,
+      top: (initial.current.minutes / 60 - start) * timeIntervalHeight.value,
       transform: [{ translateY: translateY.value }],
     };
   }, []);

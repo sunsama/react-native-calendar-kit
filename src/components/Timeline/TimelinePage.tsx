@@ -1,5 +1,5 @@
-import dayjs from 'dayjs';
 import times from 'lodash/times';
+import moment from 'moment-timezone';
 import React, { useMemo } from 'react';
 import {
   GestureResponderEvent,
@@ -76,8 +76,7 @@ const TimelinePage = ({
     updateCurrentDate,
     nowIndicatorInterval,
     isPinchActive,
-    recheckTimezoneOffset,
-    autoRefreshTimezoneOffset,
+    heightByTimeInterval,
   } = useTimelineCalendarContext();
 
   const eventsByColumns = useMemo(
@@ -121,7 +120,7 @@ const TimelinePage = ({
       event.nativeEvent.locationX,
       event.nativeEvent.locationY,
       startDate,
-      timeIntervalHeight.value,
+      heightByTimeInterval.value,
       columnWidth
     );
 
@@ -155,12 +154,13 @@ const TimelinePage = ({
         theme={theme}
         eventAnimatedDuration={eventAnimatedDuration}
         isPinchActive={isPinchActive}
+        heightByTimeInterval={heightByTimeInterval}
       />
     );
   };
 
   const _renderTimelineColumn = (dayIndex: number) => {
-    const dateByColumn = dayjs(startDate).add(dayIndex, 'd');
+    const dateByColumn = moment.tz(startDate, tzOffset).add(dayIndex, 'd');
     const dateStr = dateByColumn.format('YYYY-MM-DD');
     const isToday = dateStr === currentDate;
 
@@ -173,16 +173,13 @@ const TimelinePage = ({
         </View>
         {showNowIndicator && isToday && (
           <NowIndicator
-            timeIntervalHeight={timeIntervalHeight}
+            timeIntervalHeight={heightByTimeInterval}
             width={columnWidth}
             dayIndex={dayIndex}
             nowIndicatorColor={theme.nowIndicatorColor}
             tzOffset={tzOffset}
             start={start}
             updateCurrentDate={updateCurrentDate}
-            recheckTimezoneOffset={
-              autoRefreshTimezoneOffset ? recheckTimezoneOffset : undefined
-            }
             nowIndicatorInterval={nowIndicatorInterval}
           />
         )}

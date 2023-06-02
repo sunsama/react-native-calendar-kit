@@ -1,4 +1,4 @@
-import dayjs from 'dayjs';
+import moment from 'moment-timezone';
 import React, {
   forwardRef,
   useEffect,
@@ -22,7 +22,7 @@ import {
   withTiming,
 } from 'react-native-reanimated';
 import { timeZoneData } from '../../assets/timeZone';
-import { COLUMNS, DEFAULT_PROPS, LOCALES } from '../../constants';
+import { COLUMNS, DEFAULT_PROPS } from '../../constants';
 import { useTimelineCalendarContext } from '../../context/TimelineProvider';
 import useDragCreateGesture from '../../hooks/useDragCreateGesture';
 import useZoomGesture from '../../hooks/usePinchGesture';
@@ -47,6 +47,7 @@ const Timeline: React.ForwardRefRenderFunction<
     selectedEvent,
     highlightDates,
     onChange,
+    onTimeIntervalHeightChange,
     ...other
   },
   ref
@@ -66,7 +67,6 @@ const Timeline: React.ForwardRefRenderFunction<
     allowPinchToZoom,
     scrollToNow,
     initialDate,
-    locale,
     isShowHeader,
     currentIndex,
     pages,
@@ -76,7 +76,8 @@ const Timeline: React.ForwardRefRenderFunction<
     offsetY,
     timelineVerticalListRef,
     initialTimeIntervalHeight,
-    recheckTimezoneOffset,
+    heightByTimeInterval,
+    start,
   } = useTimelineCalendarContext();
   const { goToNextPage, goToPrevPage, goToOffsetY } = useTimelineScroll();
 
@@ -91,9 +92,15 @@ const Timeline: React.ForwardRefRenderFunction<
       }) => {
         const numOfDays =
           viewMode === 'workWeek' ? COLUMNS.week : COLUMNS[viewMode];
-        const currentDay = dayjs(props?.date).add(tzOffset, 'm');
-        const firstDateMoment = dayjs(firstDate.current[viewMode]);
-        const diffDays = currentDay.startOf('D').diff(firstDateMoment, 'd');
+        const currentDay = moment.tz(props?.date, tzOffset);
+        const firstDateMoment = moment.tz(
+          firstDate.current[viewMode],
+          tzOffset
+        );
+        const diffDays = currentDay
+          .clone()
+          .startOf('D')
+          .diff(firstDateMoment, 'd');
         const pageIndex = Math.floor(diffDays / numOfDays);
         if (pageIndex < 0 || pageIndex > totalPages[viewMode] - 1) {
           return;
@@ -106,9 +113,10 @@ const Timeline: React.ForwardRefRenderFunction<
 
         if (props?.hourScroll) {
           const minutes = currentDay.hour() * 60 + currentDay.minute();
+          const subtractMinutes = minutes - start * 60;
           const position =
-            (minutes * timeIntervalHeight.value) / 60 + spaceFromTop;
-          const offset = timeIntervalHeight.value * 5;
+            (subtractMinutes * timeIntervalHeight.value) / 60 + spaceFromTop;
+          const offset = timelineLayoutRef.current.height / 2;
           goToOffsetY(Math.max(0, position - offset), props?.animatedHour);
         }
       },
@@ -117,30 +125,29 @@ const Timeline: React.ForwardRefRenderFunction<
       getZones: () => Object.values(timeZoneData),
       getZone: (key: keyof typeof timeZoneData) => timeZoneData[key],
       getHour: () => {
-        const position = offsetY.value + 8;
-        const minutes =
-          ((position - spaceFromTop) * 60) / timeIntervalHeight.value;
-        const hour = minutes / 60;
+        const position = Math.max(0, offsetY.value - spaceFromTop + 8);
+        const minutes = (position * 60) / heightByTimeInterval.value;
+        const hour = minutes / 60 + start;
         return Math.max(0, hour);
       },
       getDate: () => {
         const numOfDays =
           viewMode === 'workWeek' ? COLUMNS.week : COLUMNS[viewMode];
-        const firstDateMoment = dayjs(firstDate.current[viewMode]);
+        const firstDateMoment = moment.tz(
+          firstDate.current[viewMode],
+          tzOffset
+        );
         const pageIndex = currentIndex.value;
-        const currentDay = firstDateMoment
-          .add(pageIndex * numOfDays, 'd')
-          .add(tzOffset, 'm');
+        const currentDay = firstDateMoment.add(pageIndex * numOfDays, 'd');
         return currentDay.toISOString();
       },
       goToHour: (hour: number, animated?: boolean) => {
-        const minutes = hour * 60;
+        const minutes = (hour - start) * 60;
         const position =
-          (minutes * timeIntervalHeight.value) / 60 + spaceFromTop;
+          (minutes * heightByTimeInterval.value) / 60 + spaceFromTop;
         goToOffsetY(Math.max(0, position - 8), animated);
       },
       forceUpdateNowIndicator: updateCurrentDate,
-      recheckTimezoneOffset: recheckTimezoneOffset,
       zoom: (props?: { scale?: number; height?: number }) => {
         let newHeight = props?.height ?? initialTimeIntervalHeight;
         if (props?.scale) {
@@ -167,40 +174,50 @@ const Timeline: React.ForwardRefRenderFunction<
       firstDate,
       totalPages,
       timelineHorizontalListRef,
+      start,
       timeIntervalHeight,
-      currentIndex.value,
       spaceFromTop,
+      timelineLayoutRef,
       goToOffsetY,
+      offsetY.value,
+      heightByTimeInterval.value,
+      currentIndex.value,
+      initialTimeIntervalHeight,
       minTimeIntervalHeight.value,
       maxTimeIntervalHeight,
-      offsetY.value,
       timelineVerticalListRef,
-      initialTimeIntervalHeight,
-      recheckTimezoneOffset,
     ]
   );
 
-  useEffect(() => {
-    const localeFn = LOCALES[locale];
-    if (localeFn) {
-      localeFn().then(() => dayjs.locale(locale));
-    }
-  }, [locale]);
+  useAnimatedReaction(
+    () => timeIntervalHeight.value,
+    (next, prev) => {
+      if (next === prev || !onTimeIntervalHeightChange) {
+        return;
+      }
+      runOnJS(onTimeIntervalHeightChange)(next);
+    },
+    [onTimeIntervalHeightChange]
+  );
 
   useEffect(() => {
+    if (!timelineLayoutRef.current.height) {
+      return;
+    }
     requestAnimationFrame(() => {
-      const current = dayjs().add(tzOffset, 'm');
+      const current = moment.tz(tzOffset);
       const isSameDate = current.format('YYYY-MM-DD') === initialDate.current;
       if (scrollToNow && isSameDate) {
         const minutes = current.hour() * 60 + current.minute();
+        const subtractMinutes = minutes - start * 60;
         const position =
-          (minutes * timeIntervalHeight.value) / 60 + spaceFromTop;
-        const offset = timeIntervalHeight.value * 5;
+          (subtractMinutes * heightByTimeInterval.value) / 60 + spaceFromTop;
+        const offset = timelineLayoutRef.current.height / 2;
         goToOffsetY(Math.max(0, position - offset), true);
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [goToOffsetY, scrollToNow]);
+  }, [goToOffsetY, scrollToNow, timelineLayoutRef.current.height]);
 
   const _onContentLayout = ({ nativeEvent: { layout } }: LayoutChangeEvent) => {
     if (!minTimeIntervalHeight.value) {

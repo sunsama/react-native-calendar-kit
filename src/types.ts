@@ -6,7 +6,6 @@ import type {
 } from 'react-native';
 import type { SharedValue } from 'react-native-reanimated';
 import type { TimeZone, timeZoneData } from './assets/timeZone';
-import type { LOCALES } from './constants';
 
 export interface TimelineCalendarHandle {
   goToDate: (props?: {
@@ -19,14 +18,12 @@ export interface TimelineCalendarHandle {
   goToPrevPage: (animated?: boolean) => void;
   getZones: () => {
     name: string;
-    offset: number;
     alternativeName: string;
     raw: string;
     countryName: string;
   }[];
   getZone: (zoneName: keyof typeof timeZoneData) => {
     name: string;
-    offset: number;
     alternativeName: string;
     raw: string;
     countryName: string;
@@ -41,9 +38,6 @@ export interface TimelineCalendarHandle {
    * * props is `undefined`: Change `timeIntervalHeight` to initialTimeIntervalHeight
    */
   zoom: (props?: { scale?: number; height?: number }) => void;
-
-  /** Refresh timezone offset */
-  recheckTimezoneOffset: () => void;
 }
 
 export interface TimelineCalendarProps
@@ -113,6 +107,9 @@ export interface TimelineProps {
 
   /** Container style of the line in the middle of the interval. */
   halfLineContainerStyle?: ViewStyle;
+
+  /** Callback function will be called when the time interval height is changed */
+  onTimeIntervalHeightChange?: (height: number) => void;
 }
 
 export interface UnavailableItemProps {
@@ -276,6 +273,16 @@ export interface TimelineProviderProps {
   /** Changing locale globally
    *
    ** Default: `en`
+   *
+   If you want to use a custom locale, please use it with `MomentConfig`
+
+   Example:
+   ```javascript
+    import {MomentConfig} from '@howljs/calendar-kit';
+    MomentConfig.updateLocale('ja', {
+        weekdaysShort: '日_月_火_水_木_金_土'.split('_'),
+    });
+   ```
    */
   locale?: LocaleType;
 
@@ -320,9 +327,6 @@ export interface TimelineProviderProps {
    */
   navigateDelay?: number;
 
-  /** Auto refresh timezone offset every seconds */
-  autoRefreshTimezoneOffset?: boolean;
-
   /** Width of calendar */
   calendarWidth?: number;
 }
@@ -337,7 +341,7 @@ export interface DayBarItemProps {
   theme: ThemeProperties;
   locale: LocaleType;
   highlightDates?: HighlightDates;
-  tzOffset: number;
+  tzOffset: string;
   currentDate: string;
 }
 
@@ -425,7 +429,7 @@ export interface PackedEvent extends EventItem {
   leftByIndex?: number;
 }
 
-export type LocaleType = keyof typeof LOCALES;
+export type LocaleType = string;
 
 export type HighlightDates = {
   [date: string]: {
