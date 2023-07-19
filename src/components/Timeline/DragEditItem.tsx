@@ -77,11 +77,7 @@ const DragEditItem = ({
   const startXY = useSharedValue({ x: 0, y: 0 });
   const translateX = useSharedValue(0);
   const eventTop = useSharedValue(defaultTopPosition);
-  const eventHeight = useSharedValue<number>(
-    theme.minimumEventHeight
-      ? Math.max(theme.minimumEventHeight, event.height)
-      : event.height
-  );
+  const eventHeight = useSharedValue<number>(event.height);
 
   useEffect(() => {
     if (useHaptic) {
@@ -182,7 +178,10 @@ const DragEditItem = ({
       start: currentDateMoment.toISOString(),
       end: currentDateMoment
         .clone()
-        .add(eventHeight.value / heightByTimeInterval.value, 'h')
+        .add(
+          Math.max(0.25, eventHeight.value / heightByTimeInterval.value),
+          'h'
+        )
         .toISOString(),
     };
 
@@ -267,15 +266,12 @@ const DragEditItem = ({
       const nextHeight = startHeight.value + e.translationY;
       const roundedHeight =
         Math.ceil(nextHeight / heightOfTenMinutes) * heightOfTenMinutes;
-      const clampedHeight = theme.minimumEventHeight
-        ? Math.max(
-            theme.minimumEventHeight,
-            Math.max(roundedHeight, heightOfTenMinutes)
-          )
-        : Math.max(roundedHeight, heightOfTenMinutes);
+      const clampedHeight = Math.max(roundedHeight, heightOfTenMinutes);
       const isSameHeight = eventHeight.value === clampedHeight;
       if (!isSameHeight) {
         eventHeight.value = clampedHeight;
+        runOnJS(recalculateEvent)();
+
         if (useHaptic) {
           runOnJS(triggerHaptic)();
         }
@@ -290,13 +286,15 @@ const DragEditItem = ({
 
   const animatedStyle = useAnimatedStyle(() => {
     return {
-      height: eventHeight.value,
+      height: theme.minimumEventHeight
+        ? Math.max(theme.minimumEventHeight, eventHeight.value)
+        : eventHeight.value,
       width: eventWidth.value,
       left: eventLeft.value,
       top: eventTop.value,
       transform: [{ translateX: translateX.value }],
     };
-  }, []);
+  }, [theme.minimumEventHeight]);
 
   const _renderEventContent = () => {
     return <Text style={[styles.title, theme.eventTitle]}>{event.title}</Text>;
