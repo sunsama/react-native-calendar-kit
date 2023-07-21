@@ -1,3 +1,4 @@
+import debounce from 'lodash/debounce';
 import moment from 'moment-timezone';
 import React, { memo, useEffect, useRef, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
@@ -161,7 +162,7 @@ const DragEditItem = ({
     }
   };
 
-  const recalculateEvent = () => {
+  const recalculateEvent = debounce(() => {
     const newLeftPosition = event.leftByIndex! + translateX.value;
     const dayIndex = Math.round(newLeftPosition / columnWidth);
     const startDate = pages[viewMode].data[currentIndex.value];
@@ -179,7 +180,11 @@ const DragEditItem = ({
       end: currentDateMoment
         .clone()
         .add(
-          Math.max(0.25, eventHeight.value / heightByTimeInterval.value),
+          // Minimum of 5 minutes
+          Math.max(
+            0.08333333333,
+            eventHeight.value / heightByTimeInterval.value
+          ),
           'h'
         )
         .toISOString(),
@@ -188,7 +193,7 @@ const DragEditItem = ({
     if (onEndDragSelectedEvent) {
       onEndDragSelectedEvent(newEvent);
     }
-  };
+  }, 200);
 
   const clearCurrentInterval = () => {
     if (timeoutRef.current) {
